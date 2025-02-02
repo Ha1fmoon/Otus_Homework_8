@@ -1,4 +1,6 @@
 ﻿using DotNetEnv;
+using Otus_Homework_8.FactServices;
+using Otus_Homework_8.MessageHandlers;
 using Telegram.Bot;
 using Telegram.Bot.Polling;
 using Telegram.Bot.Types;
@@ -15,7 +17,8 @@ internal class Program
     private const string QuitMessage = "Quitting...";
     private const string PressToQuitMessage = "Press 'A' to quit.";
     private const string TokenNotFoundMessage = "Token not found.";
-    private const string CancelMessage = "Requests was canceled.";
+    private const string Response = "Message {0} was successfully handled.";
+    private const string ErrorOccurredMessage = "Error occurred. Exception: {0}";
 
     private static async Task Main()
     {
@@ -27,8 +30,7 @@ internal class Program
 
         if (string.IsNullOrEmpty(token))
         {
-            CustomLogger.Print(TokenNotFoundMessage);
-            Environment.Exit(1);
+            throw new Exception(TokenNotFoundMessage);
         }
 
         var botClient = new TelegramBotClient(token);
@@ -37,11 +39,14 @@ internal class Program
             AllowedUpdates = [UpdateType.Message],
             DropPendingUpdates = true
         };
+        
+        var factService = new CatFactReceiver();
 
-        var handler = new UpdateHandler();
+        var handler = new UpdateHandler(Response, factService);
 
         handler.OnHandleUpdateStarted += HandleUpdateStarted;
         handler.OnHandleUpdateCompleted += HandleUpdateCompleted;
+        handler.OnErrorOccurred += HandleError;
 
         try
         {
@@ -56,6 +61,7 @@ internal class Program
         {
             handler.OnHandleUpdateStarted -= HandleUpdateStarted;
             handler.OnHandleUpdateCompleted -= HandleUpdateCompleted;
+            handler.OnErrorOccurred -= HandleError;
         }
     }
 
@@ -70,6 +76,12 @@ internal class Program
         CustomLogger.Print(string.Format(EndHandleMessage, update.Message?.Text));
         return Task.CompletedTask;
     }
+    
+    private static void HandleError(Exception exception)
+    {
+        CustomLogger.Print(string.Format(ErrorOccurredMessage, exception.Message));
+    }
+
 
     private static async Task HandleInput(TelegramBotClient botClient, CancellationTokenSource cts)
     {

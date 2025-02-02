@@ -1,4 +1,4 @@
-﻿namespace Otus_Homework_8;
+﻿namespace Otus_Homework_8.FactServices;
 
 public record CatFactDto
 {
